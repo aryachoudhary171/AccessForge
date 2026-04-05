@@ -1,98 +1,213 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# Zorvyn Backend
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This is the **Zorvyn Backend API**, built with **NestJS** and **MongoDB (Atlas)** for managing records, users, dashboards, and authentication with role-based permissions and logging.
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+* **User Authentication & Authorization**: JWT-based auth with roles and permissions.
 
-## Project setup
+  * Register via **OTP verification**
+  * Login to receive JWT
+* **Role Management**: Viewer, Analyst, Admin with hierarchical permissions.
+* **Records Management**: Full CRUD with soft delete.
+* **Dashboard Summary**:
 
-```bash
-$ npm install
+  * Total income & expenses
+  * Net balance
+  * Category totals
+  * Recent activity (last 5 records)
+  * Filter by period: `weekly` or `monthly`
+* **Logs**: Automatically created for all record actions (create, update, delete).
+* **MongoDB Integration**: All data stored in Atlas.
+
+---
+
+## Roles & Permissions
+
+| Role    | Permissions                                                                                          |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| Viewer  | `view_record`, `view_user`                                                                           |
+| Analyst | Viewer permissions + `view_dashboard`                                                                |
+| Admin   | Analyst permissions + `create_record`, `update_record`, `delete_record`, `view_logs`, `manage_roles` |
+
+---
+
+## API Endpoints
+
+### **Authentication / Users**
+
+| Method | Route              | Description                                     |
+| ------ | ------------------ | ----------------------------------------------- |
+| POST   | `/auth/register`   | Register user via OTP verification              |
+| POST   | `/auth/verify-otp` | Verify OTP and activate account                 |
+| POST   | `/auth/login`      | Login and get JWT token                         |
+| GET    | `/users`           | Get all users (requires `view_user` permission) |
+
+---
+
+### **Records**
+
+| Method | Route          | Roles                  | Permissions   | Description        |
+| ------ | -------------- | ---------------------- | ------------- | ------------------ |
+| POST   | `/records`     | Admin, Analyst         | create_record | Create a record    |
+| GET    | `/records`     | Admin, Analyst, Viewer | view_record   | Get all records    |
+| GET    | `/records/:id` | Admin, Analyst, Viewer | view_record   | Get single record  |
+| PATCH  | `/records/:id` | Admin, Analyst         | update_record | Update record      |
+| DELETE | `/records/:id` | Admin, Analyst         | delete_record | Soft delete record |
+
+---
+
+### **Dashboard**
+
+| Method | Route                | Roles                  | Permissions    | Description                                |
+| ------ | -------------------- | ---------------------- | -------------- | ------------------------------------------ |
+| GET    | `/dashboard/summary` | Viewer, Analyst, Admin | view_dashboard | Get dashboard summary (weekly/monthly/all) |
+
+---
+
+### **Logs**
+
+* Logs are automatically generated by `LogsService` for all record operations.
+
+---
+
+## Database (MongoDB Atlas)
+
+* **Collections**:
+
+  * `users`
+  * `roles`
+  * `permissions`
+  * `records`
+  * `logs`
+
+* **Record Schema**:
+
+```ts
+@Schema({ timestamps: true })
+export class Record {
+  @Prop({ required: true }) title: string;
+  @Prop() description: string;
+  @Prop({ type: String, ref: 'User', required: true }) createdBy: string;
+  @Prop({ default: false }) isDeleted: boolean;
+  @Prop({ required: true }) amount: number;
+  @Prop({ required: true, enum: ['income', 'expense'] }) type: string;
+  @Prop({ required: true }) category: string;
+  @Prop({ default: () => new Date() }) date: Date;
+}
 ```
 
-## Compile and run the project
+---
+
+## Setup
+
+1. Clone repo:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone <repo-url>
+cd zorvyn-backend
 ```
 
-## Run tests
+2. Install dependencies:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
+3. Configure environment variables:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+```env
+JWT_SECRET=SECRET_KEY
+MONGO_URI=<your-mongodb-atlas-uri>
+```
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+4. Run the server:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## Usage Notes
 
-Check out a few resources that may come in handy when working with NestJS:
+* Ensure all records have `date` set (default applied for new records).
+* Dashboard summary fetches records **created by the logged-in user**.
+* `totalIncome` and `totalExpenses` are calculated dynamically based on `type` field (`income` or `expense`).
+* Roles & permissions are **auto-upserted** on startup or via Mongo shell script.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## Example Dashboard Response
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```json
+{
+  "totalIncome": 68000,
+  "totalExpenses": 5000,
+  "netBalance": 63000,
+  "categoryTotals": {
+    "Salary": 68000,
+    "Food": 5000
+  },
+  "recentActivity": [
+    {
+      "_id": "69d25e0c7a0368576431a563",
+      "title": "Salary",
+      "amount": 30000,
+      "type": "income",
+      "category": "Salary",
+      "createdBy": "69d1fa96becc5ff1f620b855",
+      "date": "2026-04-05T22:21:48.459Z"
+    }
+  ]
+}
+```
 
-## Stay in touch
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**DEMO**
 
-## License
+### Dashboard
+![Dashboard](./screenshots/Dashboard.jpeg)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Records API
+![Records](./screenshots/Record.jpeg)
+
+
+
+
+## References
+
+### NestJS
+
+* **Controllers & Routing** – For route handling and decorators
+  [https://docs.nestjs.com/controllers](https://docs.nestjs.com/controllers)
+
+* **Guards & Authorization** – JwtAuthGuard, RolesGuard, PermissionsGuard
+  [https://docs.nestjs.com/guards](https://docs.nestjs.com/guards)
+
+* **Custom Decorators** – @Roles() aur @Permissions()
+  [https://docs.nestjs.com/custom-decorators](https://docs.nestjs.com/custom-decorators)
+
+* **Passport & JWT Integration** – authentication
+  [https://docs.nestjs.com/security/authentication](https://docs.nestjs.com/security/authentication)
+
+* **Dependency Injection & Services** – RecordsService, LogsService
+  [https://docs.nestjs.com/providers](https://docs.nestjs.com/providers)
+
+---
+
+### MongoDB
+
+* **Schemas & Models** – @Schema(), Prop(), indexes
+  [https://mongoosejs.com/docs/guide.html](https://mongoosejs.com/docs/guide.html)
+
+* **Querying Documents** – find(), findOne(), updateOne()
+  [https://mongoosejs.com/docs/queries.html](https://mongoosejs.com/docs/queries.html)
+
+* **Timestamps & Defaults** – createdAt, updatedAt
+  [https://mongoosejs.com/docs/guide.html#timestamps](https://mongoosejs.com/docs/guide.html#timestamps)
+
+* **Validation** – required fields, enums
+  [https://mongoosejs.com/docs/validation.html](https://mongoosejs.com/docs/validation.html)
+
